@@ -19,7 +19,7 @@ class SearchOverlay extends StatefulWidget {
 class _SearchOverlayState extends State<SearchOverlay> {
   final TextEditingController _searchController = TextEditingController();
   final PlacesService _placesService =
-      PlacesService('AIzaSyBfKo_6wtvIzft1w4uqT_d4uIdjnxXTFCg');
+      PlacesService('AIzaSyCcEEXbsnVt9ESSxQmPDImXuEtjl9VkP3M');
   List<PlacePrediction> _predictions = [];
   Timer? _debounce;
 
