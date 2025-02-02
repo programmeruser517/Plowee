@@ -13,18 +13,18 @@ class ActionButtons extends StatelessWidget {
           FloatingActionButton.large(
             onPressed: () {},
             heroTag: 'centerButton',
-            child: const Icon(Icons.keyboard_arrow_up),
+            child: const Icon(Icons.navigation_rounded),
           ),
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.bottomRight,
             child: Padding(
               padding: const EdgeInsets.only(right: 16.0),
-              child: FloatingActionButton.small(
+              child: FloatingActionButton(
                 onPressed: () {},
                 heroTag: 'warningButton',
                 backgroundColor: Colors.red,
-                child: const Icon(Icons.warning_outlined),
+                child: const Icon(Icons.warning_amber_rounded),
               ),
             ),
           ),
