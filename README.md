@@ -1,7 +1,7 @@
 # Plowee
 A set of mobile applications geared for community implementation to solve a massive danger: ice.
 
-#![Plowee Logo](packages/plowee/assets/image.png)
+![Plowee Logo](packages/plowee/assets/image.png)
 
 ## Project Overview
 Plowee is a comprehensive snow plow management system that combines mobile applications, IoT devices, and cloud services to provide real-time snow plow tracking and management solutions.
