@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:plowee/services/supabase_service.dart';
 import 'dart:async';
 import '../widgets/action_buttons.dart';
 import '../services/location_service.dart';
 import '../widgets/custom_map_pin.dart';
 import '../services/plow_service.dart';
 import '../services/ice_spot_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -22,6 +25,7 @@ class _MapScreenState extends State<MapScreen>
   final PlowService _plowService = PlowService();
   final IceSpotService _iceSpotService = IceSpotService();
   LatLng? _currentLocation;
+  final _supabaseService = SupabaseService();
   Set<Marker> _markers = {};
   Set<Marker> _plowMarkers = {};
   Set<Polyline> _iceSpots = {};
@@ -60,7 +64,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _initializeMarker() async {
-    _customMarker = await createCustomMarkerBitmap();
+    _customMarker = await createCustomMarkerBitmap(_pulseController.value);
     _plowMarker =
         await BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
   }
@@ -195,5 +199,77 @@ class _MapScreenState extends State<MapScreen>
     String style = await DefaultAssetBundle.of(context)
         .loadString('assets/map_style.json');
     await _mapController!.setMapStyle(style);
+  }
+
+  Future<void> _handleDangerReport() async {
+    if (_currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to get current location'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final intersections =
+          await _getIntersectionsFromCoordinates(_currentLocation!);
+
+      await _supabaseService.reportIceSpot(
+        location: _currentLocation!,
+        intersection1: intersections[0],
+        intersection2: intersections[1],
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ice spot reported successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to report ice spot: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<List<String>> _getIntersectionsFromCoordinates(LatLng latLng) async {
+    String ak = utf8.decode(base64.decode(
+        'c2stcHJvai1sWFNnaEplZk1Rc1FMMk85QVdLNTZzNHotcjNXVUJ5QTc4LTE1eHZyZndzMFRsQ3pTUXYwQmU2OFJEMElCZ0dPa1lfb2QxcFF5dFQzQmxia0ZKQUpJU0wyUVZ5NUdXbHJQMWp0TzlZT0RxX1R6Ny13X0xrX0h5OThiN0J1dk9KaHhLb1I0eWVGWjU1d2RKLU1TT3VoaDlvVXlwMWNB'));
+    const String apiUrl = 'https://api.openai.com/v1/chat/completions';
+    final prompt =
+        'I am at ${latLng.latitude}, ${latLng.longitude}. What are the nearest two road intersections? Only directly output in array form, the two roads (just the names).';
+
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $ak',
+      },
+      body: jsonEncode({
+        "model": "gpt-4",
+        "messages": [
+          {"role": "system", "content": "You are an assistant."},
+          {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data["choices"][0]["message"]["content"];
+    } else {
+      throw Exception('Failed to load response: ${response.body}');
+    }
   }
 }

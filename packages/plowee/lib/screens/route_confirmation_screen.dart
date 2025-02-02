@@ -301,55 +301,32 @@ return points;
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Route Confirmation')),
-      body: Stack(
+    appBar: AppBar(title: const Text('Route Confirmation')),
+    body: Stack(
         children: [
-          GoogleMap(
+        GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: _destinationLocation ?? const LatLng(0, 0),
-              zoom: 15,
+            target: _destinationLocation ?? const LatLng(0, 0),
+            zoom: 15,
             ),
             markers: {..._markers, ..._plowMarkers},
             polylines: {..._polylines, ..._iceSpotPolylines},
             onMapCreated: (controller) {
-              _mapController = controller;
-              _fitBounds();
+            _mapController = controller;
+            _fitBounds();
             },
-          ),
-          Positioned(
-            top: 16,
-            left: 16,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ETA: ${_totalMinutes - _elapsedMinutes} minutes',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  ETAProgressWidget(
-                    totalMinutes: _totalMinutes,
-                    elapsedMinutes: _elapsedMinutes,
-                  ),
-                ],
-              ),
+        ),
+        Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ETAProgressWidget(
+            totalMinutes: _totalMinutes,
+            elapsedMinutes: _elapsedMinutes,
             ),
-          ),
+        ),
         ],
-      ),
+    ),
     );
   }
 }
