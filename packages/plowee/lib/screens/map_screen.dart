@@ -13,13 +13,15 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
-  late GoogleMapController _mapController;
+class _MapScreenState extends State<MapScreen>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  GoogleMapController? _mapController; // Change from late to nullable
   final LocationService _locationService = LocationService();
   LatLng? _currentLocation;
   Set<Marker> _markers = {};
   StreamSubscription<Position>? _locationSubscription;
   BitmapDescriptor? _customMarker;
+  late AnimationController _pulseController;
 
   static const CameraPosition _initialPosition = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
@@ -29,6 +31,11 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      // Add this
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    )..repeat();
     WidgetsBinding.instance.addObserver(this);
     _initializeMarker();
     _initializeLocation();
@@ -36,6 +43,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _locationSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -66,7 +74,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   void _updateLocation(Position position) async {
     final newLocation = LatLng(position.latitude, position.longitude);
-    final customIcon = await createCustomMarkerBitmap();
+    final customIcon = await createCustomMarkerBitmap(_pulseController.value);
 
     setState(() {
       _currentLocation = newLocation;
@@ -79,12 +87,16 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         ),
       };
     });
-    _centerOnLocation();
+    if (_mapController != null) {
+      // Add null check here
+      _centerOnLocation();
+    }
   }
 
   Future<void> _centerOnLocation() async {
-    if (_currentLocation != null) {
-      await _mapController.animateCamera(
+    if (_currentLocation != null && _mapController != null) {
+      // Add null check
+      await _mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
             target: _currentLocation!,
@@ -98,19 +110,26 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GoogleMap(
-        mapType: MapType.normal,
-        initialCameraPosition: _initialPosition,
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-          _applyCustomMapStyle();
-          _initializeLocation();
+      body: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          return GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: _initialPosition,
+            onMapCreated: (GoogleMapController controller) {
+              setState(() {
+                _mapController = controller;
+              });
+              _applyCustomMapStyle();
+              _initializeLocation();
+            },
+            markers: _markers,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+          );
         },
-        markers: _markers,
-        myLocationEnabled: false,
-        myLocationButtonEnabled: false,
-        zoomControlsEnabled: false,
-        mapToolbarEnabled: false,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: const ActionButtons(),
@@ -118,8 +137,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _applyCustomMapStyle() async {
+    if (_mapController == null) return; // Add null check
     String style = await DefaultAssetBundle.of(context)
         .loadString('assets/map_style.json');
-    _mapController.setMapStyle(style);
+    await _mapController!.setMapStyle(style);
   }
 }

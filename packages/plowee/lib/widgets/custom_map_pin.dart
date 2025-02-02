@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CustomMapPin extends CustomPainter {
@@ -17,11 +16,18 @@ class CustomMapPin extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Draw outer pulse circle
-    final pulseRadius = (20.0 * (1 + (pulse * 0.2)));
+    final pulseRadius = (20.0 * (1 + (pulse * 0.5))); // Increased pulse effect
     final pulsePaint = Paint()
-      ..color = dotColor.withOpacity(0.2 * (1 - pulse))
+      ..color = dotColor.withOpacity(0.3 * (1 - pulse))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, pulseRadius, pulsePaint);
+
+    // Draw second pulse circle
+    final secondPulseRadius = (15.0 * (1 + (pulse * 0.3)));
+    final secondPulsePaint = Paint()
+      ..color = dotColor.withOpacity(0.4 * (1 - pulse))
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, secondPulseRadius, secondPulsePaint);
 
     // Draw main dot
     final dotPaint = Paint()
@@ -42,12 +48,12 @@ class CustomMapPin extends CustomPainter {
   }
 }
 
-Future<BitmapDescriptor> createCustomMarkerBitmap() async {
+Future<BitmapDescriptor> createCustomMarkerBitmap([double pulse = 0.0]) async {
   final pictureRecorder = ui.PictureRecorder();
   final canvas = Canvas(pictureRecorder);
   final size = const Size(48, 48);
 
-  CustomMapPin(dotColor: Colors.blue, pulse: 0.0).paint(canvas, size);
+  CustomMapPin(dotColor: Colors.blue, pulse: pulse).paint(canvas, size);
 
   final picture = pictureRecorder.endRecording();
   final image = await picture.toImage(
