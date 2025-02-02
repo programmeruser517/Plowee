@@ -1,8 +1,7 @@
-import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:async';
 import '../widgets/action_buttons.dart';
 import '../services/location_service.dart';
 import '../widgets/custom_map_pin.dart';
@@ -14,15 +13,13 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen>
-    with SingleTickerProviderStateMixin {
-  GoogleMapController? _mapController;
+class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
+  late GoogleMapController _mapController;
   final LocationService _locationService = LocationService();
   LatLng? _currentLocation;
   Set<Marker> _markers = {};
   StreamSubscription<Position>? _locationSubscription;
   BitmapDescriptor? _customMarker;
-  late AnimationController _pulseController;
 
   static const CameraPosition _initialPosition = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
@@ -32,40 +29,15 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
-    _setupAnimation();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeMarker();
     _initializeLocation();
-  }
-
-  void _setupAnimation() {
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-
-    _pulseController.addListener(() {
-      _updateMarkerWithPulse();
-    });
-  }
-
-  void _updateMarkerWithPulse() {
-    if (_customMarker != null) {
-      final pulse = _pulseController.value;
-      final customIcon = CustomMapPin(
-        dotColor: Colors.blue,
-        pulse: pulse,
-      );
-      final bitmap = customIcon.toBitmap();
-      setState(() {
-        _customMarker = BitmapDescriptor.fromBytes(bitmap as Uint8List);
-      });
-    }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _locationSubscription?.cancel();
-    _mapController?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -94,30 +66,30 @@ class _MapScreenState extends State<MapScreen>
 
   void _updateLocation(Position position) async {
     final newLocation = LatLng(position.latitude, position.longitude);
-    _customMarker ??= await createCustomMarkerBitmap();
+    final customIcon = await createCustomMarkerBitmap();
+
     setState(() {
       _currentLocation = newLocation;
       _markers = {
         Marker(
           markerId: const MarkerId('user_location'),
           position: newLocation,
-          icon: _customMarker!,
+          icon: customIcon,
           anchor: const Offset(0.5, 0.5),
         ),
       };
     });
-
-    if (_mapController != null) {
-      _centerOnLocation();
-    }
+    _centerOnLocation();
   }
 
   Future<void> _centerOnLocation() async {
-    if (_currentLocation != null && _mapController != null) {
-      await _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          _currentLocation!,
-          15,
+    if (_currentLocation != null) {
+      await _mapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _currentLocation!,
+            zoom: 15.0,
+          ),
         ),
       );
     }
@@ -129,13 +101,10 @@ class _MapScreenState extends State<MapScreen>
       body: GoogleMap(
         mapType: MapType.normal,
         initialCameraPosition: _initialPosition,
-        onMapCreated: (controller) {
-          setState(() {
-            _mapController = controller;
-            if (_currentLocation != null) {
-              _centerOnLocation();
-            }
-          });
+        onMapCreated: (GoogleMapController controller) {
+          _mapController = controller;
+          _applyCustomMapStyle();
+          _initializeLocation();
         },
         markers: _markers,
         myLocationEnabled: false,
@@ -146,5 +115,11 @@ class _MapScreenState extends State<MapScreen>
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: const ActionButtons(),
     );
+  }
+
+  Future<void> _applyCustomMapStyle() async {
+    String style = await DefaultAssetBundle.of(context)
+        .loadString('assets/map_style.json');
+    _mapController.setMapStyle(style);
   }
 }

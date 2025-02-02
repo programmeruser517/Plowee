@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CustomMapPin extends CustomPainter {
@@ -9,7 +8,7 @@ class CustomMapPin extends CustomPainter {
   final double pulse;
 
   CustomMapPin({
-    required this.dotColor,
+    this.dotColor = Colors.blue,
     this.pulse = 0.0,
   });
 
@@ -18,11 +17,10 @@ class CustomMapPin extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Draw outer pulse circle
-    final pulseRadius = (20.0 * (1 + (pulse * 0.3)));
+    final pulseRadius = (20.0 * (1 + (pulse * 0.2)));
     final pulsePaint = Paint()
-      ..color = dotColor.withOpacity(0.3 * (1 - pulse))
-      ..style = PaintingStyle.fill
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+      ..color = dotColor.withOpacity(0.2 * (1 - pulse))
+      ..style = PaintingStyle.fill;
     canvas.drawCircle(center, pulseRadius, pulsePaint);
 
     // Draw main dot
@@ -42,17 +40,6 @@ class CustomMapPin extends CustomPainter {
   bool shouldRepaint(CustomMapPin oldDelegate) {
     return oldDelegate.pulse != pulse || oldDelegate.dotColor != dotColor;
   }
-
-  Future<Uint8List> toBitmap() async {
-    final RenderRepaintBoundary boundary = RenderRepaintBoundary();
-
-    final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-
-    final ByteData? byteData =
-        await image.toByteData(format: ui.ImageByteFormat.png);
-
-    return byteData!.buffer.asUint8List();
-  }
 }
 
 Future<BitmapDescriptor> createCustomMarkerBitmap() async {
@@ -60,10 +47,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmap() async {
   final canvas = Canvas(pictureRecorder);
   final size = const Size(48, 48);
 
-  CustomMapPin(
-    dotColor: Colors.blue,
-    pulse: 0.0,
-  ).paint(canvas, size);
+  CustomMapPin(dotColor: Colors.blue, pulse: 0.0).paint(canvas, size);
 
   final picture = pictureRecorder.endRecording();
   final image = await picture.toImage(
