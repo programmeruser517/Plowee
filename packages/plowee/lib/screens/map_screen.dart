@@ -18,13 +18,13 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   GoogleMapController? _mapController; // Change from late to nullable
-final LocationService _locationService = LocationService();
-final PlowService _plowService = PlowService();
-final IceSpotService _iceSpotService = IceSpotService();
+  final LocationService _locationService = LocationService();
+  final PlowService _plowService = PlowService();
+  final IceSpotService _iceSpotService = IceSpotService();
   LatLng? _currentLocation;
-Set<Marker> _markers = {};
-Set<Marker> _plowMarkers = {};
-Set<Polyline> _iceSpots = {};
+  Set<Marker> _markers = {};
+  Set<Marker> _plowMarkers = {};
+  Set<Polyline> _iceSpots = {};
   StreamSubscription<Position>? _locationSubscription;
   BitmapDescriptor? _customMarker;
   BitmapDescriptor? _plowMarker;
@@ -98,8 +98,8 @@ Set<Polyline> _iceSpots = {};
           anchor: const Offset(0.5, 0.5),
         ),
       };
-    _updatePlowMarkers(newLocation);
-    _updateIceSpots(newLocation);
+      _updatePlowMarkers(newLocation);
+      _updateIceSpots(newLocation);
     });
     if (_mapController != null) {
       // Add null check here
@@ -167,24 +167,28 @@ Set<Polyline> _iceSpots = {};
           .map((plow) => Marker(
                 markerId: MarkerId(plow.id),
                 position: plow.location,
-                icon: _plowMarker ?? BitmapDescriptor.defaultMarker,
+                icon: _plowMarker ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueViolet),
                 anchor: const Offset(0.5, 0.5),
               ))
           .toSet();
     });
-}
+  }
 
-void _updateIceSpots(LatLng center) {
-final iceSpots = _iceSpotService.getNearbyIceSpots(center);
-setState(() {
-    _iceSpots = iceSpots.map((spot) => Polyline(
-        polylineId: PolylineId(spot.id),
-        points: spot.points,
-        color: Colors.blue.withOpacity(0.5),
-        width: 8,
-        )).toSet();
-});
-}
+  void _updateIceSpots(LatLng center) {
+    final iceSpots = _iceSpotService.getNearbyIceSpots(center);
+    setState(() {
+      _iceSpots = iceSpots
+          .map((spot) => Polyline(
+                polylineId: PolylineId(spot.id),
+                points: spot.points,
+                color: Colors.blue.withOpacity(0.5),
+                width: 8,
+              ))
+          .toSet();
+    });
+  }
 
   Future<void> _applyCustomMapStyle() async {
     if (_mapController == null) return; // Add null check
