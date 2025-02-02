@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import '../screens/route_confirmation_screen.dart';
 import '../services/places_service.dart';
 import 'dart:async';
 
 class SearchOverlay extends StatefulWidget {
-  final VoidCallback onClose;
-  final Function(String) onAddressSelected;
+final VoidCallback onClose;
+final Function(String) onAddressSelected;
 
-  const SearchOverlay({
+const SearchOverlay({
     super.key,
-    required this.onClose,
+    required this.onClose, 
     required this.onAddressSelected,
-  });
+});
 
   @override
   State<SearchOverlay> createState() => _SearchOverlayState();
@@ -95,9 +96,16 @@ class _SearchOverlayState extends State<SearchOverlay> {
               itemBuilder: (context, index) {
                 final prediction = _predictions[index];
                 return ListTile(
-                  onTap: () {
-                    widget.onAddressSelected(prediction.description);
-                  },
+                onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                    builder: (context) => RouteConfirmationScreen(
+                        destinationAddress: prediction.description,
+                    ),
+                    ),
+                );
+                },
                   title: Text(prediction.description),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,

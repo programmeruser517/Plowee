@@ -5,6 +5,8 @@ import 'dart:async';
 import '../widgets/action_buttons.dart';
 import '../services/location_service.dart';
 import '../widgets/custom_map_pin.dart';
+import '../services/plow_service.dart';
+import '../services/ice_spot_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -16,11 +18,17 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   GoogleMapController? _mapController; // Change from late to nullable
-  final LocationService _locationService = LocationService();
+final LocationService _locationService = LocationService();
+final PlowService _plowService = PlowService();
+final IceSpotService _iceSpotService = IceSpotService();
   LatLng? _currentLocation;
-  Set<Marker> _markers = {};
+Set<Marker> _markers = {};
+Set<Marker> _plowMarkers = {};
+Set<Polyline> _iceSpots = {};
   StreamSubscription<Position>? _locationSubscription;
   BitmapDescriptor? _customMarker;
+  BitmapDescriptor? _plowMarker;
+  Timer? _plowUpdateTimer;
   late AnimationController _pulseController;
 
   static const CameraPosition _initialPosition = CameraPosition(
@@ -39,18 +47,22 @@ class _MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     _initializeMarker();
     _initializeLocation();
+    _startPlowUpdates();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _locationSubscription?.cancel();
+    _plowUpdateTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   Future<void> _initializeMarker() async {
     _customMarker = await createCustomMarkerBitmap();
+    _plowMarker =
+        await BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
   }
 
   Future<void> _initializeLocation() async {
@@ -86,6 +98,8 @@ class _MapScreenState extends State<MapScreen>
           anchor: const Offset(0.5, 0.5),
         ),
       };
+    _updatePlowMarkers(newLocation);
+    _updateIceSpots(newLocation);
     });
     if (_mapController != null) {
       // Add null check here
@@ -123,7 +137,8 @@ class _MapScreenState extends State<MapScreen>
               _applyCustomMapStyle();
               _initializeLocation();
             },
-            markers: _markers,
+            markers: _markers.union(_plowMarkers),
+            polylines: _iceSpots,
             myLocationEnabled: false,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -135,6 +150,41 @@ class _MapScreenState extends State<MapScreen>
       floatingActionButton: const ActionButtons(),
     );
   }
+
+  void _startPlowUpdates() {
+// Update plow locations every 5 seconds
+    _plowUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_currentLocation != null) {
+        _updatePlowMarkers(_currentLocation!);
+      }
+    });
+  }
+
+  void _updatePlowMarkers(LatLng center) {
+    final plows = _plowService.getNearbyPlows(center);
+    setState(() {
+      _plowMarkers = plows
+          .map((plow) => Marker(
+                markerId: MarkerId(plow.id),
+                position: plow.location,
+                icon: _plowMarker ?? BitmapDescriptor.defaultMarker,
+                anchor: const Offset(0.5, 0.5),
+              ))
+          .toSet();
+    });
+}
+
+void _updateIceSpots(LatLng center) {
+final iceSpots = _iceSpotService.getNearbyIceSpots(center);
+setState(() {
+    _iceSpots = iceSpots.map((spot) => Polyline(
+        polylineId: PolylineId(spot.id),
+        points: spot.points,
+        color: Colors.blue.withOpacity(0.5),
+        width: 8,
+        )).toSet();
+});
+}
 
   Future<void> _applyCustomMapStyle() async {
     if (_mapController == null) return; // Add null check
