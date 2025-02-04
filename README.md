@@ -1,4 +1,6 @@
 # Plowee
+![version](https://img.shields.io/badge/version-0.7.0-blue)    [![Devpost](https://img.shields.io/badge/Devpost-View_Project-blue)](https://devpost.com/software/plowee?ref_content=my-projects-tab&ref_feature=my_projects)
+
 A set of mobile applications geared for community implementation to solve a massive danger: ice.
 
 ![Plowee Logo](packages/plowee/assets/image.png)
